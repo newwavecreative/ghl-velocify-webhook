@@ -30,6 +30,16 @@ app.post('/webhook/ghl-to-velocify', async (req, res) => {
     try {
         console.log('Received webhook from GoHighLevel:', JSON.stringify(req.body, null, 2));
         
+        // FILTER: Only process the University Bank form (if using global webhook)
+        const formName = req.body.form_name || req.body.formName || '';
+        const formId = req.body.form_id || req.body.formId || '';
+        
+        // Skip if it's not the right form (comment this out if using form-specific webhook)
+        if (!isUniversityBankForm(formName, formId, req.body)) {
+            console.log('Skipping - not the University Bank form');
+            return res.status(200).json({ message: 'Form not targeted for University Bank' });
+        }
+        
         // Optional: Verify webhook signature from GoHighLevel
         if (GHL_WEBHOOK_SECRET && req.headers['x-signature']) {
             const signature = req.headers['x-signature'];
@@ -210,6 +220,45 @@ app.listen(PORT, () => {
     console.log(`Velocify Import URL: ${VELOCIFY_CONFIG.importUrl}`);
     console.log(`Campaign ID: ${VELOCIFY_CONFIG.campaignId}`);
 });
+
+// Helper function to identify the University Bank form
+function isUniversityBankForm(formName, formId, payload) {
+    // Check by form name
+    if (formName && formName.toLowerCase().includes('complete this form to get started')) {
+        return true;
+    }
+    
+    // Check by form title/button text
+    if (payload.form_title && payload.form_title.includes('University Bank')) {
+        return true;
+    }
+    
+    if (payload.form_title && payload.form_title.includes('Schedule A Meeting With University Bank')) {
+        return true;
+    }
+    
+    // Check by specific form ID (you'd get this from GoHighLevel)
+    // Uncomment and add actual form ID if you know it:
+    // const universityBankFormIds = ['your_form_id_here'];
+    // if (formId && universityBankFormIds.includes(formId)) {
+    //     return true;
+    // }
+    
+    // Check by page URL or other identifiers
+    if (payload.page_url && payload.page_url.includes('university-bank')) {
+        return true;
+    }
+    
+    // Check by button text
+    if (payload.button_text && payload.button_text.includes('Schedule A Meeting With University Bank')) {
+        return true;
+    }
+    
+    // Fallback: if no specific identifiers found, process it anyway
+    // (Remove this return true if you want strict filtering)
+    console.log('No specific form identifiers found, processing anyway');
+    return true;
+}
 
 // Remove the old SOAP/REST functions since we're using the Import URL
 // sendToVelocifySOAP and sendToVelocifyREST are no longer needed
