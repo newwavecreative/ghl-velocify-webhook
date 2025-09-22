@@ -221,43 +221,66 @@ app.listen(PORT, () => {
     console.log(`Campaign ID: ${VELOCIFY_CONFIG.campaignId}`);
 });
 
-// Helper function to identify the University Bank form
+// Helper function to identify the University Bank forms
 function isUniversityBankForm(formName, formId, payload) {
-    // Check by form name
-    if (formName && formName.toLowerCase().includes('complete this form to get started')) {
+    // Specific Form IDs for University Bank forms
+    const universityBankFormIds = [
+        '35aVCd7RUqgNDAZ3aDC1', // First University Bank form
+        '3k9CDG63EryRBKqLmmqI'  // Second University Bank form
+    ];
+    
+    // Primary check: Form ID match
+    if (formId && universityBankFormIds.includes(formId)) {
+        console.log(`✅ Form ID match found: ${formId}`);
         return true;
     }
     
-    // Check by form title/button text
-    if (payload.form_title && payload.form_title.includes('University Bank')) {
+    // Secondary check: Form name patterns
+    if (formName) {
+        const lowerFormName = formName.toLowerCase();
+        if (lowerFormName.includes('complete this form to get started') ||
+            lowerFormName.includes('university bank') ||
+            lowerFormName.includes('schedule a meeting')) {
+            console.log(`✅ Form name match found: ${formName}`);
+            return true;
+        }
+    }
+    
+    // Tertiary check: Form title/button text
+    if (payload.form_title) {
+        const lowerTitle = payload.form_title.toLowerCase();
+        if (lowerTitle.includes('university bank') ||
+            lowerTitle.includes('schedule a meeting with university bank')) {
+            console.log(`✅ Form title match found: ${payload.form_title}`);
+            return true;
+        }
+    }
+    
+    // Check by page URL containing either form ID
+    if (payload.page_url && 
+        (payload.page_url.includes('35aVCd7RUqgNDAZ3aDC1') || 
+         payload.page_url.includes('3k9CDG63EryRBKqLmmqI'))) {
+        console.log(`✅ Form ID found in page URL: ${payload.page_url}`);
         return true;
     }
     
-    if (payload.form_title && payload.form_title.includes('Schedule A Meeting With University Bank')) {
+    // Check by location ID (from your URL: mwppqiCfdkvcu0dJroWh)
+    const universityBankLocationId = 'mwppqiCfdkvcu0dJroWh';
+    if (payload.location_id === universityBankLocationId || payload.locationId === universityBankLocationId) {
+        console.log(`✅ Location ID match found: ${payload.location_id || payload.locationId}`);
         return true;
     }
     
-    // Check by specific form ID (you'd get this from GoHighLevel)
-    // Uncomment and add actual form ID if you know it:
-    // const universityBankFormIds = ['your_form_id_here'];
-    // if (formId && universityBankFormIds.includes(formId)) {
-    //     return true;
-    // }
+    // STRICT FILTERING: Only process if we found a match
+    console.log(`❌ Form not recognized for University Bank:`, {
+        formId: formId,
+        formName: formName,
+        locationId: payload.location_id || payload.locationId,
+        pageUrl: payload.page_url,
+        formTitle: payload.form_title
+    });
     
-    // Check by page URL or other identifiers
-    if (payload.page_url && payload.page_url.includes('university-bank')) {
-        return true;
-    }
-    
-    // Check by button text
-    if (payload.button_text && payload.button_text.includes('Schedule A Meeting With University Bank')) {
-        return true;
-    }
-    
-    // Fallback: if no specific identifiers found, process it anyway
-    // (Remove this return true if you want strict filtering)
-    console.log('No specific form identifiers found, processing anyway');
-    return true;
+    return false; // Reject all other forms
 }
 
 // Remove the old SOAP/REST functions since we're using the Import URL
