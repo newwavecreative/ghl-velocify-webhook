@@ -49,10 +49,16 @@ app.post('/webhook/ghl-to-velocify', async (req, res) => {
         console.log('Timestamp:', new Date().toISOString());
         console.log('Payload:', JSON.stringify(req.body, null, 2));
 
-        // Extract form information
-        const formId = req.body.form_id || req.body.formId || '';
-        const formName = req.body.form_name || req.body.formName || '';
-        const locationId = req.body.location_id || req.body.locationId || '';
+        // Extract form information from multiple possible locations
+        const formId = req.body.form_id || req.body.formId || 
+                      extractFormIdFromUrl(req.body.url) || 
+                      extractFormIdFromUrl(req.body.page_url) || '';
+        
+        const formName = req.body.form_name || req.body.formName || 
+                        req.body.workflow?.name || '';
+        
+        const locationId = req.body.location_id || req.body.locationId || 
+                          req.body.id || '';
 
         console.log('Form Info:', { formId, formName, locationId });
 
@@ -140,6 +146,25 @@ app.get('/test-velocify', async (req, res) => {
         });
     }
 });
+
+// Extract form ID from URL string
+function extractFormIdFromUrl(url) {
+    if (!url) return '';
+    
+    // Look for form ID pattern in URLs
+    const formIdMatch = url.match(/form\/([a-zA-Z0-9]+)/);
+    if (formIdMatch) {
+        return formIdMatch[1];
+    }
+    
+    // Look for other possible patterns
+    const altMatch = url.match(/\/([a-zA-Z0-9]{16,})/);
+    if (altMatch) {
+        return altMatch[1];
+    }
+    
+    return '';
+}
 
 // Helper function to check if form is for University Bank
 function isUniversityBankForm(formId, formName, locationId, payload) {
